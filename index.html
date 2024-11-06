@@ -43,7 +43,7 @@
           correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Once the QR code image is generated, draw it on the canvas
+        // Delay slightly to ensure the QR code image is fully rendered
         setTimeout(() => {
           const qrImage = qrCode._el.children[0]; // Access the generated <img> element
 
@@ -54,27 +54,26 @@
           // Draw the overlay image at the center of the QR code
           const overlayImage = new Image();
           overlayImage.src = "lakehead.png"; // Ensure lakehead.png is in the same directory
+          
           overlayImage.onload = () => {
-  const overlaySize = 64; // Adjust overlay size as needed
-  const overlayX = (qrCanvas.width - overlaySize) / 2;
-  const overlayY = (qrCanvas.height - overlaySize) / 2;
-  context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
-};
+            const overlaySize = 64; // Adjust overlay size as needed
+            const overlayX = (qrCanvas.width - overlaySize) / 2;
+            const overlayY = (qrCanvas.height - overlaySize) / 2;
+            context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
 
-// Move this line outside the onload function to ensure it shows after drawing completes
-document.getElementById("save-button").style.display = "block";
-
-
+            // Show the Save button only after everything is drawn
+            document.getElementById("save-button").style.display = "block";
+          };
         }, 100);
       } else {
-         alert("Please enter a URL.");
+        alert("Please enter a URL.");
       }
     }
 
     function saveQR() {
       const qrCanvas = document.getElementById("qr-canvas");
 
-      // Convert canvas to Blob instead of data URL
+      // Convert canvas to Blob and trigger download
       qrCanvas.toBlob((blob) => {
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
