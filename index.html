@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>QR Code Generator with Overlay</h1>
-  <input type="text" id="url-input" placeholder="Enter URL" />
+  <input type="text" id="url-input" placeholder="Enter URL" onkeydown="if(event.key === 'Enter') generateQR()" />
   <button onclick="generateQR()">Generate QR Code</button>
   
   <div id="qr-container">
