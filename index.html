@@ -26,7 +26,7 @@
     <canvas id="qr-canvas" width="256" height="256"></canvas>
   </div>
 
-  <button onclick="saveQR()">Save QR Code</button>
+  <button id="save-button" onclick="saveQR()" style="display: none;">Save QR Code</button>
 
   <script>
     function generateQR() {
@@ -60,6 +60,7 @@
             const overlayX = (qrCanvas.width - overlaySize) / 2;
             const overlayY = (qrCanvas.height - overlaySize) / 2;
             context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
+            document.getElementById("save-button").style.display = "block";
           };
         }, 100);
       } else {
