@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Generator with Overlay and Save Option</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    #qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-top: 20px;
+    }
+    #qr-canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>QR Code Generator with Overlay</h1>
+  <input type="text" id="url-input" placeholder="Enter URL" />
+  <button onclick="generateQR()">Generate QR Code</button>
+  
+  <div id="qr-container">
+    <canvas id="qr-canvas" width="256" height="256"></canvas>
+  </div>
+
+  <button onclick="saveQR()">Save QR Code</button>
+
+  <script>
+    function generateQR() {
+      const url = document.getElementById("url-input").value;
+      const qrCanvas = document.getElementById("qr-canvas");
+      const context = qrCanvas.getContext("2d");
+
+      if (url) {
+        // Generate QR code as an image element
+        const qrCode = new QRCode(document.createElement("div"), {
+          text: url,
+          width: 256,
+          height: 256,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // Once the QR code image is generated, draw it on the canvas
+        setTimeout(() => {
+          const qrImage = qrCode._el.children[0]; // Access the generated <img> element
+
+          // Draw the QR code on the canvas
+          context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+          context.drawImage(qrImage, 0, 0, qrCanvas.width, qrCanvas.height);
+
+          // Draw the overlay image at the center of the QR code
+          const overlayImage = new Image();
+          overlayImage.src = "lakehead.png"; // Ensure lakehead.png is in the same directory
+
+          overlayImage.onload = () => {
+            const overlaySize = 64; // Adjust overlay size as needed
+            const overlayX = (qrCanvas.width - overlaySize) / 2;
+            const overlayY = (qrCanvas.height - overlaySize) / 2;
+            context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
+          };
+        }, 100);
+      } else {
+        alert("Please enter a URL.");
+      }
+    }
+
+    function saveQR() {
+      const qrCanvas = document.getElementById("qr-canvas");
+
+      // Convert canvas to Blob instead of data URL
+      qrCanvas.toBlob((blob) => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "qr-code.png"; // Set filename
+        document.body.appendChild(link); // Append to DOM
+        link.click(); // Trigger download
+        document.body.removeChild(link); // Remove from DOM
+      }, "image/png"); // Specify image format
+    }
+  </script>
+</body>
+</html>
