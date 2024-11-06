@@ -56,16 +56,16 @@
           overlayImage.src = "lakehead.png"; // Ensure lakehead.png is in the same directory
 
           overlayImage.onload = () => {
-  const overlaySize = 64; // Adjust overlay size as needed
-  const overlayX = (qrCanvas.width - overlaySize) / 2;
-  const overlayY = (qrCanvas.height - overlaySize) / 2;
-  context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
+            const overlaySize = 64; // Adjust overlay size as needed
+            const overlayX = (qrCanvas.width - overlaySize) / 2;
+            const overlayY = (qrCanvas.height - overlaySize) / 2;
+            context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
 
-  // Show the Save button after the overlay is fully drawn
-  setTimeout(() => {
-    document.getElementById("save-button").style.display = "block";
-  }, 50);
-};
+            // Show the Save button after the overlay is fully drawn
+            setTimeout(() => {
+              document.getElementById("save-button").style.display = "block";
+            }, 50);
+          };
 
         }, 100);
       } else {
