@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Code Generator with Overlay and Save Option</title>
-  <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+  <script src="https://unpkg.com/awesome-qr@2.1.5-rc.0/lib/awesome-qr.umd.js"></script>
   <style>
     #qr-container {
       display: flex;
@@ -61,7 +61,7 @@
       };
     }
 
-    function generateQR() {
+    async function generateQR() {
       const url = document.getElementById("url-input").value;
       const qrCanvas = document.getElementById("qr-canvas");
 
@@ -69,95 +69,75 @@
         // Clear previous QR code
         qrCanvas.innerHTML = '';
 
-        // Create QR code with qr-code-styling using lakehead.png as center logo
-        const qrCode = new QRCodeStyling({
-          width: 512,
-          height: 512,
-          type: "canvas",
-          data: url,
-          qrOptions: {
-            errorCorrectionLevel: 'H'
-          },
-          dotsOptions: {
-            color: "#cc0000", // Red from Lakehead colors
-            type: "rounded"
-          },
-          backgroundOptions: {
-            color: "#ffffff" // White background
-          },
-          cornersSquareOptions: {
-            color: "#000080", // Blue from Lakehead colors
-            type: "extra-rounded"
-          },
-          cornersDotOptions: {
-            color: "#000080", // Blue from Lakehead colors
-            type: "dot"
-          },
-          image: "lakehead.png", // Center logo
-          imageOptions: {
-            crossOrigin: "anonymous",
-            hideBackgroundDots: true, // Hide dots behind the logo for clean look
-            imageSize: 0.4, // 40% of QR code size - good balance
-            margin: 5 // Small margin around the logo
-          }
-        });
+        try {
+          // Load lakehead.png as data URL for AwesomeQRCode
+          const backgroundImage = await loadImageAsDataURL('lakehead.png');
+          
+          // Create QR code with AwesomeQRCode using lakehead.png as background
+          const buffer = await new AwesomeQR.AwesomeQR({
+            text: url,
+            size: 512,
+            margin: 20,
+            correctLevel: AwesomeQR.QRErrorCorrectLevel.H,
+            backgroundImage: backgroundImage,
+            backgroundDimming: 'rgba(0,0,0,0.1)', // Slight dimming for better contrast
+            autoColor: true, // Automatically adjust colors for better readability
+            whiteMargin: false, // Transparent margin to show background
+            logoScale: 0, // No center logo since we want full background
+          }).draw();
 
-        qrCode.append(qrCanvas);
-        
-        // Show the Save button
-        document.getElementById("save-button").style.display = "block";
-        
-        // Store qrCode reference for saving
-        window.currentQRCode = qrCode;
+          // Convert buffer to blob and create image
+          const blob = new Blob([buffer], { type: 'image/png' });
+          const imageUrl = URL.createObjectURL(blob);
+          
+          // Create image element and add to container
+          const img = document.createElement('img');
+          img.src = imageUrl;
+          img.style.maxWidth = '100%';
+          img.style.height = 'auto';
+          qrCanvas.appendChild(img);
+          
+          // Store image for saving
+          window.currentQRImage = img;
+          
+          // Show the Save button
+          document.getElementById("save-button").style.display = "block";
+          
+        } catch (error) {
+          console.error('Error generating QR code:', error);
+          alert('Error generating QR code. Please try again.');
+        }
       } else {
         alert("Please enter a URL.");
       }
     }
 
-    function getGradientFromReference() {
-      if (!referenceImageData) {
-        // Fallback colors if reference image not loaded
-        return {
-          dark: '#000080',
-          light: '#ffffff',
-          top: '#cc0000',    // Red
-          middle: '#ffffff', // White
-          bottom: '#000080', // Blue
-          lightTop: '#ffcccc',
-          lightMiddle: '#ffffff', 
-          lightBottom: '#ccccff'
+    function loadImageAsDataURL(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
         };
-      }
-
-      // Sample colors from different parts of lakehead.png
-      const height = referenceHeight;
-      const width = referenceWidth;
-      
-      // Top area (red)
-      const topColor = getColorFromReference(width / 2, height * 0.2);
-      // Middle area (white/waves)
-      const middleColor = getColorFromReference(width / 2, height * 0.5);
-      // Bottom area (blue)
-      const bottomColor = getColorFromReference(width / 2, height * 0.8);
-
-      return {
-        dark: `rgb(${Math.min(topColor.r, bottomColor.r)}, ${Math.min(topColor.g, bottomColor.g)}, ${Math.min(topColor.b, bottomColor.b)})`,
-        light: `rgb(${Math.max(topColor.r, middleColor.r, bottomColor.r)}, ${Math.max(topColor.g, middleColor.g, bottomColor.g)}, ${Math.max(topColor.b, middleColor.b, bottomColor.b)})`,
-        top: `rgb(${topColor.r}, ${topColor.g}, ${topColor.b})`,
-        middle: `rgb(${middleColor.r}, ${middleColor.g}, ${middleColor.b})`,
-        bottom: `rgb(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b})`,
-        lightTop: `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.3)`,
-        lightMiddle: `rgba(${middleColor.r}, ${middleColor.g}, ${middleColor.b}, 0.2)`,
-        lightBottom: `rgba(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b}, 0.3)`
-      };
+        img.onerror = reject;
+        img.src = src;
+      });
     }
 
     function saveQR() {
-      if (window.currentQRCode) {
-        window.currentQRCode.download({ 
-          name: "qr-code", 
-          extension: "png" 
-        });
+      if (window.currentQRImage) {
+        // Create download link
+        const link = document.createElement('a');
+        link.href = window.currentQRImage.src;
+        link.download = 'qr-code.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     }
   </script>
