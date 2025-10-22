@@ -61,6 +61,57 @@
       };
     }
 
+    function getPixel(imageData, x, y) {
+      if (x < 0 || y < 0 || x >= imageData.width || y >= imageData.height) {
+        return { r: 255, g: 255, b: 255 };
+      }
+      const index = (y * imageData.width + x) * 4;
+      return {
+        r: imageData.data[index],
+        g: imageData.data[index + 1],
+        b: imageData.data[index + 2]
+      };
+    }
+
+    function overlayDotPattern() {
+      const canvas = document.querySelector('#qr-canvas canvas');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Clear canvas and stretch background image
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw stretched lakehead.png as background
+      const img = new Image();
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Overlay dots based on original QR pattern
+        const dotSize = 6; // Adjust dot size
+        const spacing = 12; // Spacing between dots
+        
+        for (let y = 0; y < canvas.height; y += spacing) {
+          for (let x = 0; x < canvas.width; x += spacing) {
+            const originalPixel = getPixel(imageData, 
+              Math.floor(x * 512 / canvas.width), 
+              Math.floor(y * 512 / canvas.height)
+            );
+            
+            // If original pixel was dark (QR data), draw colored dot
+            if (originalPixel.r < 128) {
+              ctx.fillStyle = (x + y) % 24 < 12 ? '#cc0000' : '#000000'; // Alternate red/black
+              ctx.beginPath();
+              ctx.arc(x, y, dotSize, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          }
+        }
+      };
+      img.src = "lakehead.png";
+    }
+
     function generateQR() {
       const url = document.getElementById("url-input").value;
       const qrCanvas = document.getElementById("qr-canvas");
@@ -71,38 +122,40 @@
 
         // Create QR code with qr-code-styling using lakehead.png as center logo
         const qrCode = new QRCodeStyling({
-          width: 512,
-          height: 512,
+          width: 1024,
+          height: 1024,
           type: "canvas",
           data: url,
           qrOptions: {
             errorCorrectionLevel: 'H'
           },
           dotsOptions: {
-            color: "#cc0000", // Red from Lakehead colors
-            type: "dots"
+            color: "#cc0000",
+            type: "dots",
+            size: 0.6
           },
           backgroundOptions: {
-            color: "#ffffff" // White background
+            color: "#ffffff"
           },
           cornersSquareOptions: {
-            color: "#000080", // Blue from Lakehead colors
+            color: "#000080",
             type: "extra-rounded"
           },
           cornersDotOptions: {
-            color: "#000080", // Blue from Lakehead colors
+            color: "#000080",
             type: "dot"
           },
-          image: "lakehead.png", // Center logo
+          image: "lakehead.png",
           imageOptions: {
             crossOrigin: "anonymous",
-            hideBackgroundDots: true, // Hide dots behind the logo for clean look
-            imageSize: 0.4, // 40% of QR code size - good balance
-            margin: 5 // Small margin around the logo
+            hideBackgroundDots: true,
+            imageSize: 0.4,
+            margin: 5
           }
         });
 
         qrCode.append(qrCanvas);
+        setTimeout(() => overlayDotPattern(), 100); // Small delay to ensure QR renders first
         
         // Show the Save button
         document.getElementById("save-button").style.display = "block";
