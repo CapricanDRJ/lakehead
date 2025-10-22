@@ -73,44 +73,7 @@
       };
     }
 
-    function overlayDotPattern() {
-      const canvas = document.querySelector('#qr-canvas canvas');
-      if (!canvas) return;
-      
-      const ctx = canvas.getContext('2d');
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      
-      // Clear canvas and stretch background image
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw stretched lakehead.png as background
-      const img = new Image();
-      img.onload = function() {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // Overlay dots based on original QR pattern
-        const dotSize = 6; // Adjust dot size
-        const spacing = 12; // Spacing between dots
-        
-        for (let y = 0; y < canvas.height; y += spacing) {
-          for (let x = 0; x < canvas.width; x += spacing) {
-            const originalPixel = getPixel(imageData, 
-              Math.floor(x * 512 / canvas.width), 
-              Math.floor(y * 512 / canvas.height)
-            );
-            
-            // If original pixel was dark (QR data), draw colored dot
-            if (originalPixel.r < 128) {
-              ctx.fillStyle = (x + y) % 24 < 12 ? '#cc0000' : '#000000'; // Alternate red/black
-              ctx.beginPath();
-              ctx.arc(x, y, dotSize, 0, 2 * Math.PI);
-              ctx.fill();
-            }
-          }
-        }
-      };
-      img.src = "lakehead.png";
-    }
+
 
     function generateQR() {
       const url = document.getElementById("url-input").value;
@@ -132,7 +95,7 @@
           dotsOptions: {
             color: "#cc0000",
             type: "dots",
-            size: 0.6
+            size: 0.4
           },
           backgroundOptions: {
             color: "#ffffff"
@@ -155,7 +118,6 @@
         });
 
         qrCode.append(qrCanvas);
-        setTimeout(() => overlayDotPattern(), 100); // Small delay to ensure QR renders first
         
         // Show the Save button
         document.getElementById("save-button").style.display = "block";
