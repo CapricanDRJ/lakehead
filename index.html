@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Code Generator with Overlay and Save Option</title>
-  <script src="qrcode.min.js"></script>
+  <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
   <style>
     #qr-container {
       display: flex;
@@ -23,7 +23,7 @@
   <button onclick="generateQR()">Generate QR Code</button>
   
   <div id="qr-container">
-    <canvas id="qr-canvas" width="512" height="512"></canvas>
+    <div id="qr-canvas"></div>
   </div>
 
   <button id="save-button" onclick="saveQR()" style="display: none;">Save QR Code</button>
@@ -49,29 +49,6 @@
       img.src = "lakehead.png";
     };
 
-    function estimateModuleSize(imageData, width, height) {
-      // Look for the first transition from white to black to estimate module size
-      // Start from top-left and scan horizontally to find the first black square
-      let transitionCount = 0;
-      let lastPixel = 255; // Start assuming white
-      
-      for (let x = 0; x < width && transitionCount < 10; x++) {
-        const pixelIndex = (0 * width + x) * 4; // Top row
-        const currentPixel = imageData.data[pixelIndex];
-        
-        if (Math.abs(currentPixel - lastPixel) > 100) { // Significant change
-          transitionCount++;
-        }
-        lastPixel = currentPixel;
-      }
-      
-      // Estimate module size based on transitions found
-      // A typical QR code has about 25-177 modules depending on version
-      // For our purposes, estimate around 25-50 modules per side
-      const estimatedModules = Math.max(21, Math.min(50, transitionCount * 3));
-      return Math.floor(width / estimatedModules);
-    }
-
     function getColorFromReference(x, y) {
       if (!referenceImageData) return { r: 0, g: 0, b: 0 };
       x = Math.max(0, Math.min(referenceWidth - 1, Math.floor(x)));
@@ -84,126 +61,118 @@
       };
     }
 
-    function getLuminance(r, g, b) {
-      // Calculate relative luminance using WCAG formula
-      const rs = r / 255;
-      const gs = g / 255;
-      const bs = b / 255;
-      const rLin = rs <= 0.03928 ? rs / 12.92 : Math.pow((rs + 0.055) / 1.055, 2.4);
-      const gLin = gs <= 0.03928 ? gs / 12.92 : Math.pow((gs + 0.055) / 1.055, 2.4);
-      const bLin = bs <= 0.03928 ? bs / 12.92 : Math.pow((bs + 0.055) / 1.055, 2.4);
-      return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
-    }
-
-    function adjustColorForContrast(color, shouldBeDark) {
-      const luminance = getLuminance(color.r, color.g, color.b);
-      
-      if (shouldBeDark) {
-        // For QR "black" pixels - ensure dark enough
-        if (luminance > 0.3) {
-          // Too bright, darken it
-          const factor = 0.3; // Make it darker
-          return {
-            r: Math.floor(color.r * factor),
-            g: Math.floor(color.g * factor),
-            b: Math.floor(color.b * factor)
-          };
-        }
-        return color; // Already dark enough
-      } else {
-        // For QR "white" pixels - ensure light enough  
-        if (luminance < 0.7) {
-          // Too dark, lighten it
-          const factor = 0.4; // Blend with white
-          return {
-            r: Math.floor(color.r + (255 - color.r) * factor),
-            g: Math.floor(color.g + (255 - color.g) * factor),
-            b: Math.floor(color.b + (255 - color.b) * factor)
-          };
-        }
-        return color; // Already light enough
-      }
-    }
-
     function generateQR() {
       const url = document.getElementById("url-input").value;
       const qrCanvas = document.getElementById("qr-canvas");
-      const context = qrCanvas.getContext("2d");
 
       if (url) {
-        // Generate QR code as an image element
-        const qrCode = new QRCode(document.createElement("div"), {
-          text: url,
+        // Clear previous QR code
+        qrCanvas.innerHTML = '';
+
+        // Get gradient colors from lakehead.png reference image
+        const gradientColors = getGradientFromReference();
+
+        // Create QR code with qr-code-styling
+        const qrCode = new QRCodeStyling({
           width: 512,
           height: 512,
-          correctLevel: QRCode.CorrectLevel.H
+          type: "canvas",
+          data: url,
+          qrOptions: {
+            errorCorrectionLevel: 'H'
+          },
+          dotsOptions: {
+            color: gradientColors.dark,
+            type: "rounded",
+            gradient: {
+              type: 'linear',
+              rotation: Math.PI / 4,
+              colorStops: [
+                { offset: 0, color: gradientColors.top },
+                { offset: 0.5, color: gradientColors.middle },
+                { offset: 1, color: gradientColors.bottom }
+              ]
+            }
+          },
+          backgroundOptions: {
+            color: gradientColors.light,
+            gradient: {
+              type: 'linear',
+              rotation: Math.PI / 4,
+              colorStops: [
+                { offset: 0, color: gradientColors.lightTop },
+                { offset: 0.5, color: gradientColors.lightMiddle },
+                { offset: 1, color: gradientColors.lightBottom }
+              ]
+            }
+          },
+          cornersSquareOptions: {
+            color: gradientColors.dark,
+            type: "extra-rounded"
+          },
+          cornersDotOptions: {
+            color: gradientColors.dark,
+            type: "dot"
+          }
         });
 
-        // Delay slightly to ensure the QR code image is fully rendered
-        setTimeout(() => {
-          const qrImage = qrCode._el.children[0]; // Access the generated <img> element
-
-          // Draw the QR code on the canvas
-          context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-          context.drawImage(qrImage, 0, 0, qrCanvas.width, qrCanvas.height);
-
-          // Apply color mapping if reference image is loaded
-          if (referenceImageData) {
-            const qrImageData = context.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
-            
-            // Estimate QR module size by finding the pattern
-            const moduleSize = estimateModuleSize(qrImageData, qrCanvas.width, qrCanvas.height);
-            
-            // Process each QR module instead of individual pixels
-            for (let moduleY = 0; moduleY < Math.floor(qrCanvas.height / moduleSize); moduleY++) {
-              for (let moduleX = 0; moduleX < Math.floor(qrCanvas.width / moduleSize); moduleX++) {
-                // Get the center pixel of this module to determine if it's black or white
-                const centerX = Math.floor(moduleX * moduleSize + moduleSize / 2);
-                const centerY = Math.floor(moduleY * moduleSize + moduleSize / 2);
-                const pixelIndex = (centerY * qrCanvas.width + centerX) * 4;
-                const qrPixel = qrImageData.data[pixelIndex];
-                
-                // Map module coordinates to reference image coordinates
-                const refX = (moduleX / Math.floor(qrCanvas.width / moduleSize)) * referenceWidth;
-                const refY = (moduleY / Math.floor(qrCanvas.height / moduleSize)) * referenceHeight;
-                const refColor = getColorFromReference(refX, refY);
-                
-                let moduleColor;
-                if (qrPixel < 128) { // Black module - should be dark
-                  const darkColor = adjustColorForContrast(refColor, true);
-                  moduleColor = `rgb(${darkColor.r}, ${darkColor.g}, ${darkColor.b})`;
-                } else { // White module - should be light
-                  const lightColor = adjustColorForContrast(refColor, false);
-                  moduleColor = `rgb(${lightColor.r}, ${lightColor.g}, ${lightColor.b})`;
-                }
-                
-                // Fill the entire module with the color
-                context.fillStyle = moduleColor;
-                context.fillRect(moduleX * moduleSize, moduleY * moduleSize, moduleSize, moduleSize);
-              }
-            }
-          }
-
-          // Show the Save button only after everything is drawn
-          document.getElementById("save-button").style.display = "block";
-        }, 100);
+        qrCode.append(qrCanvas);
+        
+        // Show the Save button
+        document.getElementById("save-button").style.display = "block";
+        
+        // Store qrCode reference for saving
+        window.currentQRCode = qrCode;
       } else {
         alert("Please enter a URL.");
       }
     }
 
-    function saveQR() {
-      const qrCanvas = document.getElementById("qr-canvas");
+    function getGradientFromReference() {
+      if (!referenceImageData) {
+        // Fallback colors if reference image not loaded
+        return {
+          dark: '#000080',
+          light: '#ffffff',
+          top: '#cc0000',    // Red
+          middle: '#ffffff', // White
+          bottom: '#000080', // Blue
+          lightTop: '#ffcccc',
+          lightMiddle: '#ffffff', 
+          lightBottom: '#ccccff'
+        };
+      }
 
-      // Convert canvas to Blob and trigger download
-      qrCanvas.toBlob((blob) => {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "qr-code.png"; // Set filename
-        document.body.appendChild(link); // Append to DOM
-        link.click(); // Trigger download
-        document.body.removeChild(link); // Remove from DOM
-      }, "image/png"); // Specify image format
+      // Sample colors from different parts of lakehead.png
+      const height = referenceHeight;
+      const width = referenceWidth;
+      
+      // Top area (red)
+      const topColor = getColorFromReference(width / 2, height * 0.2);
+      // Middle area (white/waves)
+      const middleColor = getColorFromReference(width / 2, height * 0.5);
+      // Bottom area (blue)
+      const bottomColor = getColorFromReference(width / 2, height * 0.8);
+
+      return {
+        dark: `rgb(${Math.min(topColor.r, bottomColor.r)}, ${Math.min(topColor.g, bottomColor.g)}, ${Math.min(topColor.b, bottomColor.b)})`,
+        light: `rgb(${Math.max(topColor.r, middleColor.r, bottomColor.r)}, ${Math.max(topColor.g, middleColor.g, bottomColor.g)}, ${Math.max(topColor.b, middleColor.b, bottomColor.b)})`,
+        top: `rgb(${topColor.r}, ${topColor.g}, ${topColor.b})`,
+        middle: `rgb(${middleColor.r}, ${middleColor.g}, ${middleColor.b})`,
+        bottom: `rgb(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b})`,
+        lightTop: `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.3)`,
+        lightMiddle: `rgba(${middleColor.r}, ${middleColor.g}, ${middleColor.b}, 0.2)`,
+        lightBottom: `rgba(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b}, 0.3)`
+      };
+    }
+
+    function saveQR() {
+      if (window.currentQRCode) {
+        window.currentQRCode.download({ 
+          name: "qr-code", 
+          extension: "png" 
+        });
+      }
     }
   </script>
 </body>
