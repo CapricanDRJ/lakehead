@@ -49,6 +49,29 @@
       img.src = "lakehead.png";
     };
 
+    function estimateModuleSize(imageData, width, height) {
+      // Look for the first transition from white to black to estimate module size
+      // Start from top-left and scan horizontally to find the first black square
+      let transitionCount = 0;
+      let lastPixel = 255; // Start assuming white
+      
+      for (let x = 0; x < width && transitionCount < 10; x++) {
+        const pixelIndex = (0 * width + x) * 4; // Top row
+        const currentPixel = imageData.data[pixelIndex];
+        
+        if (Math.abs(currentPixel - lastPixel) > 100) { // Significant change
+          transitionCount++;
+        }
+        lastPixel = currentPixel;
+      }
+      
+      // Estimate module size based on transitions found
+      // A typical QR code has about 25-177 modules depending on version
+      // For our purposes, estimate around 25-50 modules per side
+      const estimatedModules = Math.max(21, Math.min(50, transitionCount * 3));
+      return Math.floor(width / estimatedModules);
+    }
+
     function getColorFromReference(x, y) {
       if (!referenceImageData) return { r: 0, g: 0, b: 0 };
       x = Math.max(0, Math.min(referenceWidth - 1, Math.floor(x)));
@@ -128,23 +151,35 @@
           if (referenceImageData) {
             const qrImageData = context.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
             
-            for (let y = 0; y < qrCanvas.height; y++) {
-              for (let x = 0; x < qrCanvas.width; x++) {
-                const pixelIndex = (y * qrCanvas.width + x) * 4;
+            // Estimate QR module size by finding the pattern
+            const moduleSize = estimateModuleSize(qrImageData, qrCanvas.width, qrCanvas.height);
+            
+            // Process each QR module instead of individual pixels
+            for (let moduleY = 0; moduleY < Math.floor(qrCanvas.height / moduleSize); moduleY++) {
+              for (let moduleX = 0; moduleX < Math.floor(qrCanvas.width / moduleSize); moduleX++) {
+                // Get the center pixel of this module to determine if it's black or white
+                const centerX = Math.floor(moduleX * moduleSize + moduleSize / 2);
+                const centerY = Math.floor(moduleY * moduleSize + moduleSize / 2);
+                const pixelIndex = (centerY * qrCanvas.width + centerX) * 4;
                 const qrPixel = qrImageData.data[pixelIndex];
                 
-                const refX = (x / qrCanvas.width) * referenceWidth;
-                const refY = (y / qrCanvas.height) * referenceHeight;
+                // Map module coordinates to reference image coordinates
+                const refX = (moduleX / Math.floor(qrCanvas.width / moduleSize)) * referenceWidth;
+                const refY = (moduleY / Math.floor(qrCanvas.height / moduleSize)) * referenceHeight;
                 const refColor = getColorFromReference(refX, refY);
                 
-                if (qrPixel < 128) { // Black pixel - should be dark
+                let moduleColor;
+                if (qrPixel < 128) { // Black module - should be dark
                   const darkColor = adjustColorForContrast(refColor, true);
-                  context.fillStyle = `rgb(${darkColor.r}, ${darkColor.g}, ${darkColor.b})`;
-                } else { // White pixel - should be light
+                  moduleColor = `rgb(${darkColor.r}, ${darkColor.g}, ${darkColor.b})`;
+                } else { // White module - should be light
                   const lightColor = adjustColorForContrast(refColor, false);
-                  context.fillStyle = `rgb(${lightColor.r}, ${lightColor.g}, ${lightColor.b})`;
+                  moduleColor = `rgb(${lightColor.r}, ${lightColor.g}, ${lightColor.b})`;
                 }
-                context.fillRect(x, y, 1, 1);
+                
+                // Fill the entire module with the color
+                context.fillStyle = moduleColor;
+                context.fillRect(moduleX * moduleSize, moduleY * moduleSize, moduleSize, moduleSize);
               }
             }
           }
