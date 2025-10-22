@@ -69,17 +69,7 @@
         // Clear previous QR code
         qrCanvas.innerHTML = '';
 
-        // Get colors from lakehead.png if loaded
-        let dotColor = "#cc0000"; // Default red
-        let backgroundColor = "#ffffff"; // Default white
-        
-        if (referenceImageData) {
-          // Sample a color from the top area (red part)
-          const topColor = getColorFromReference(referenceWidth / 2, referenceHeight * 0.3);
-          dotColor = `rgb(${topColor.r}, ${topColor.g}, ${topColor.b})`;
-        }
-
-        // Create QR code with qr-code-styling
+        // Create QR code with qr-code-styling using lakehead.png as center logo
         const qrCode = new QRCodeStyling({
           width: 512,
           height: 512,
@@ -89,39 +79,77 @@
             errorCorrectionLevel: 'H'
           },
           dotsOptions: {
-            color: dotColor,
+            color: "#cc0000", // Red from Lakehead colors
             type: "rounded"
           },
           backgroundOptions: {
-            color: backgroundColor
+            color: "#ffffff" // White background
           },
           cornersSquareOptions: {
-            color: "#000080", // Blue corners
+            color: "#000080", // Blue from Lakehead colors
             type: "extra-rounded"
           },
           cornersDotOptions: {
-            color: "#000080",
+            color: "#000080", // Blue from Lakehead colors
             type: "dot"
           },
-          image: "lakehead.png", // Use as center logo
+          image: "lakehead.png", // Center logo
           imageOptions: {
             crossOrigin: "anonymous",
-            hideBackgroundDots: true,
-            imageSize: 0.3, // Smaller size for better scanning
-            margin: 10
+            hideBackgroundDots: true, // Hide dots behind the logo for clean look
+            imageSize: 0.4, // 40% of QR code size - good balance
+            margin: 5 // Small margin around the logo
           }
         });
 
         qrCode.append(qrCanvas);
         
-        // Store qrCode reference for saving
-        window.currentQRCode = qrCode;
-        
         // Show the Save button
         document.getElementById("save-button").style.display = "block";
+        
+        // Store qrCode reference for saving
+        window.currentQRCode = qrCode;
       } else {
         alert("Please enter a URL.");
       }
+    }
+
+    function getGradientFromReference() {
+      if (!referenceImageData) {
+        // Fallback colors if reference image not loaded
+        return {
+          dark: '#000080',
+          light: '#ffffff',
+          top: '#cc0000',    // Red
+          middle: '#ffffff', // White
+          bottom: '#000080', // Blue
+          lightTop: '#ffcccc',
+          lightMiddle: '#ffffff', 
+          lightBottom: '#ccccff'
+        };
+      }
+
+      // Sample colors from different parts of lakehead.png
+      const height = referenceHeight;
+      const width = referenceWidth;
+      
+      // Top area (red)
+      const topColor = getColorFromReference(width / 2, height * 0.2);
+      // Middle area (white/waves)
+      const middleColor = getColorFromReference(width / 2, height * 0.5);
+      // Bottom area (blue)
+      const bottomColor = getColorFromReference(width / 2, height * 0.8);
+
+      return {
+        dark: `rgb(${Math.min(topColor.r, bottomColor.r)}, ${Math.min(topColor.g, bottomColor.g)}, ${Math.min(topColor.b, bottomColor.b)})`,
+        light: `rgb(${Math.max(topColor.r, middleColor.r, bottomColor.r)}, ${Math.max(topColor.g, middleColor.g, bottomColor.g)}, ${Math.max(topColor.b, middleColor.b, bottomColor.b)})`,
+        top: `rgb(${topColor.r}, ${topColor.g}, ${topColor.b})`,
+        middle: `rgb(${middleColor.r}, ${middleColor.g}, ${middleColor.b})`,
+        bottom: `rgb(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b})`,
+        lightTop: `rgba(${topColor.r}, ${topColor.g}, ${topColor.b}, 0.3)`,
+        lightMiddle: `rgba(${middleColor.r}, ${middleColor.g}, ${middleColor.b}, 0.2)`,
+        lightBottom: `rgba(${bottomColor.r}, ${bottomColor.g}, ${bottomColor.b}, 0.3)`
+      };
     }
 
     function saveQR() {
