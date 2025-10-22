@@ -69,7 +69,7 @@
         // Clear previous QR code
         qrCanvas.innerHTML = '';
 
-        // Create QR code with qr-code-styling using lakehead.png as background
+        // Create QR code with qr-code-styling using lakehead.png as center logo
         const qrCode = new QRCodeStyling({
           width: 512,
           height: 512,
@@ -79,18 +79,26 @@
             errorCorrectionLevel: 'H'
           },
           dotsOptions: {
-            color: "#000080", // Dark blue for visibility
-            type: "square"
+            color: "#cc0000", // Red from Lakehead colors
+            type: "rounded"
           },
           backgroundOptions: {
-            color: "#ffffff" // White background as fallback
+            color: "#ffffff" // White background
           },
-          image: "lakehead.png", // Use your lakehead image
+          cornersSquareOptions: {
+            color: "#000080", // Blue from Lakehead colors
+            type: "extra-rounded"
+          },
+          cornersDotOptions: {
+            color: "#000080", // Blue from Lakehead colors
+            type: "dot"
+          },
+          image: "lakehead.png", // Center logo
           imageOptions: {
             crossOrigin: "anonymous",
-            hideBackgroundDots: false, // Keep QR dots visible over image
-            imageSize: 1.0, // Full size to cover entire background
-            margin: 0 // No margin around image
+            hideBackgroundDots: true, // Hide dots behind the logo for clean look
+            imageSize: 0.4, // 40% of QR code size - good balance
+            margin: 5 // Small margin around the logo
           }
         });
 
