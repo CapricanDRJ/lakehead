@@ -69,10 +69,7 @@
         // Clear previous QR code
         qrCanvas.innerHTML = '';
 
-        // Get gradient colors from lakehead.png reference image
-        const gradientColors = getGradientFromReference();
-
-        // Create QR code with qr-code-styling
+        // Create QR code with qr-code-styling using lakehead.png as background
         const qrCode = new QRCodeStyling({
           width: 512,
           height: 512,
@@ -82,37 +79,18 @@
             errorCorrectionLevel: 'H'
           },
           dotsOptions: {
-            color: gradientColors.dark,
-            type: "rounded",
-            gradient: {
-              type: 'linear',
-              rotation: Math.PI / 4,
-              colorStops: [
-                { offset: 0, color: gradientColors.top },
-                { offset: 0.5, color: gradientColors.middle },
-                { offset: 1, color: gradientColors.bottom }
-              ]
-            }
+            color: "#000080", // Dark blue for visibility
+            type: "square"
           },
           backgroundOptions: {
-            color: gradientColors.light,
-            gradient: {
-              type: 'linear',
-              rotation: Math.PI / 4,
-              colorStops: [
-                { offset: 0, color: gradientColors.lightTop },
-                { offset: 0.5, color: gradientColors.lightMiddle },
-                { offset: 1, color: gradientColors.lightBottom }
-              ]
-            }
+            color: "#ffffff" // White background as fallback
           },
-          cornersSquareOptions: {
-            color: gradientColors.dark,
-            type: "extra-rounded"
-          },
-          cornersDotOptions: {
-            color: gradientColors.dark,
-            type: "dot"
+          image: "lakehead.png", // Use your lakehead image
+          imageOptions: {
+            crossOrigin: "anonymous",
+            hideBackgroundDots: false, // Keep QR dots visible over image
+            imageSize: 1.0, // Full size to cover entire background
+            margin: 0 // No margin around image
           }
         });
 
