@@ -23,7 +23,7 @@
   <button onclick="generateQR()">Generate QR Code</button>
   
   <div id="qr-container">
-    <canvas id="qr-canvas" width="256" height="256"></canvas>
+    <canvas id="qr-canvas" width="512" height="512"></canvas>
   </div>
 
   <button id="save-button" onclick="saveQR()" style="display: none;">Save QR Code</button>
@@ -111,8 +111,8 @@
         // Generate QR code as an image element
         const qrCode = new QRCode(document.createElement("div"), {
           text: url,
-          width: 256,
-          height: 256,
+          width: 512,
+          height: 512,
           correctLevel: QRCode.CorrectLevel.H
         });
 
