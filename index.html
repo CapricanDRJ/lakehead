@@ -61,6 +61,47 @@
       };
     }
 
+    function getLuminance(r, g, b) {
+      // Calculate relative luminance using WCAG formula
+      const rs = r / 255;
+      const gs = g / 255;
+      const bs = b / 255;
+      const rLin = rs <= 0.03928 ? rs / 12.92 : Math.pow((rs + 0.055) / 1.055, 2.4);
+      const gLin = gs <= 0.03928 ? gs / 12.92 : Math.pow((gs + 0.055) / 1.055, 2.4);
+      const bLin = bs <= 0.03928 ? bs / 12.92 : Math.pow((bs + 0.055) / 1.055, 2.4);
+      return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+    }
+
+    function adjustColorForContrast(color, shouldBeDark) {
+      const luminance = getLuminance(color.r, color.g, color.b);
+      
+      if (shouldBeDark) {
+        // For QR "black" pixels - ensure dark enough
+        if (luminance > 0.3) {
+          // Too bright, darken it
+          const factor = 0.3; // Make it darker
+          return {
+            r: Math.floor(color.r * factor),
+            g: Math.floor(color.g * factor),
+            b: Math.floor(color.b * factor)
+          };
+        }
+        return color; // Already dark enough
+      } else {
+        // For QR "white" pixels - ensure light enough  
+        if (luminance < 0.7) {
+          // Too dark, lighten it
+          const factor = 0.4; // Blend with white
+          return {
+            r: Math.floor(color.r + (255 - color.r) * factor),
+            g: Math.floor(color.g + (255 - color.g) * factor),
+            b: Math.floor(color.b + (255 - color.b) * factor)
+          };
+        }
+        return color; // Already light enough
+      }
+    }
+
     function generateQR() {
       const url = document.getElementById("url-input").value;
       const qrCanvas = document.getElementById("qr-canvas");
@@ -96,10 +137,12 @@
                 const refY = (y / qrCanvas.height) * referenceHeight;
                 const refColor = getColorFromReference(refX, refY);
                 
-                if (qrPixel < 128) { // Black pixel
-                  context.fillStyle = `rgb(${refColor.r}, ${refColor.g}, ${refColor.b})`;
-                } else { // White pixel
-                  context.fillStyle = `rgba(128, 128, 128, 0.5)`; // Grey with 50% transparency
+                if (qrPixel < 128) { // Black pixel - should be dark
+                  const darkColor = adjustColorForContrast(refColor, true);
+                  context.fillStyle = `rgb(${darkColor.r}, ${darkColor.g}, ${darkColor.b})`;
+                } else { // White pixel - should be light
+                  const lightColor = adjustColorForContrast(refColor, false);
+                  context.fillStyle = `rgb(${lightColor.r}, ${lightColor.g}, ${lightColor.b})`;
                 }
                 context.fillRect(x, y, 1, 1);
               }
