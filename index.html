@@ -29,6 +29,38 @@
   <button id="save-button" onclick="saveQR()" style="display: none;">Save QR Code</button>
 
   <script>
+    let referenceImageData = null;
+    let referenceWidth = 0;
+    let referenceHeight = 0;
+
+    // Load reference image data on page load
+    window.onload = function() {
+      const img = new Image();
+      img.onload = function() {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        referenceWidth = img.width;
+        referenceHeight = img.height;
+        tempCtx.drawImage(img, 0, 0);
+        referenceImageData = tempCtx.getImageData(0, 0, referenceWidth, referenceHeight);
+      };
+      img.src = "lakehead.png";
+    };
+
+    function getColorFromReference(x, y) {
+      if (!referenceImageData) return { r: 0, g: 0, b: 0 };
+      x = Math.max(0, Math.min(referenceWidth - 1, Math.floor(x)));
+      y = Math.max(0, Math.min(referenceHeight - 1, Math.floor(y)));
+      const index = (y * referenceWidth + x) * 4;
+      return {
+        r: referenceImageData.data[index],
+        g: referenceImageData.data[index + 1],
+        b: referenceImageData.data[index + 2]
+      };
+    }
+
     function generateQR() {
       const url = document.getElementById("url-input").value;
       const qrCanvas = document.getElementById("qr-canvas");
@@ -51,19 +83,31 @@
           context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
           context.drawImage(qrImage, 0, 0, qrCanvas.width, qrCanvas.height);
 
-          // Draw the overlay image at the center of the QR code
-          const overlayImage = new Image();
-          overlayImage.src = "lakehead.png"; // Ensure lakehead.png is in the same directory
-          
-          overlayImage.onload = () => {
-            const overlaySize = 64; // Adjust overlay size as needed
-            const overlayX = (qrCanvas.width - overlaySize) / 2;
-            const overlayY = (qrCanvas.height - overlaySize) / 2;
-            context.drawImage(overlayImage, overlayX, overlayY, overlaySize, overlaySize);
+          // Apply color mapping if reference image is loaded
+          if (referenceImageData) {
+            const qrImageData = context.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+            
+            for (let y = 0; y < qrCanvas.height; y++) {
+              for (let x = 0; x < qrCanvas.width; x++) {
+                const pixelIndex = (y * qrCanvas.width + x) * 4;
+                const qrPixel = qrImageData.data[pixelIndex];
+                
+                const refX = (x / qrCanvas.width) * referenceWidth;
+                const refY = (y / qrCanvas.height) * referenceHeight;
+                const refColor = getColorFromReference(refX, refY);
+                
+                if (qrPixel < 128) { // Black pixel
+                  context.fillStyle = `rgb(${refColor.r}, ${refColor.g}, ${refColor.b})`;
+                } else { // White pixel
+                  context.fillStyle = `rgba(${refColor.r}, ${refColor.g}, ${refColor.b}, 0.5)`;
+                }
+                context.fillRect(x, y, 1, 1);
+              }
+            }
+          }
 
-            // Show the Save button only after everything is drawn
-            document.getElementById("save-button").style.display = "block";
-          };
+          // Show the Save button only after everything is drawn
+          document.getElementById("save-button").style.display = "block";
         }, 100);
       } else {
         alert("Please enter a URL.");
